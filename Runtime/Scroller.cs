@@ -295,6 +295,8 @@ namespace UIS {
         /// </summary>
         float _previousScrollPosition = -1;
 
+        private Vector2 previousScrollBarPosition = Vector2.zero;
+
         /// <summary>
         /// Cache with item indexes
         /// </summary>
@@ -537,6 +539,14 @@ namespace UIS {
         /// Handler on scroller
         /// </summary>
         void OnScrollChange(Vector2 vector) {
+            // While the scroll bar is relaxing, stop moving entirely when it falls below a certain threshold so that it
+            // doesn't drift way from the intended target index.
+            if ((previousScrollBarPosition - vector).sqrMagnitude < 1.0e-4f) {
+                previousScrollBarPosition = vector;
+                return;
+            }
+            previousScrollBarPosition = vector;
+
             // Note: If the scroller position changed but the scroll velocity is exactly zero,
             //       the movement was done via a scrollbar. In this case, we need to ScrollTo()
             //       the indicated position directly.
@@ -544,7 +554,7 @@ namespace UIS {
             //         This is why the we take (1.0 - scrollPos) instead of scrollPos directly.
             if (_scroll.velocity.magnitude == 0.0f) {
                 var scrollPos = (Type == 0) ? vector.y : vector.x;
-                var newIndex = Mathf.RoundToInt(_count * (1.0f - scrollPos));
+                var newIndex = Mathf.RoundToInt((_count - 1) * (1.0f - scrollPos));
                 ScrollTo(newIndex);
             }
 
@@ -576,6 +586,7 @@ namespace UIS {
             } else {
                 z = y;
             }
+            _previousScrollPosition = Mathf.Clamp(_previousScrollPosition, 0f, _count - 1);
             if (y < -LabelOffset && IsPullTop) {
                 TopLabel.gameObject.SetActive(true);
                 TopLabel.text = TopPullLabel;
@@ -959,15 +970,31 @@ namespace UIS {
         /// </summary>
         /// <param name="index">Item index</param>
         public void ScrollTo(int index) {
+
+            var contentHeight = _content.rect.height;
+            var containerHeight = _container.height;
+            var maxPosition = contentHeight - _container.height;
+
+            var currPos = _content.anchoredPosition;
+            currPos.y = Mathf.Min(-_positions[index], maxPosition);
+            _content.anchoredPosition = currPos;
+
             var gap = 2;
-            if (index > _count) {
-                index = _count;
+            if (index >= _count) {
+                index = _count - 1;
             } else if (index < 0) {
                 index = 0;
             }
-            if (index + _views.Length >= _count) {
+            if ((_views.Length < _count) && (index + _views.Length >= _count)) {
                 index = _count - _views.Length + AddonViewCount;
             }
+
+            // If the content is smaller than the container, then don't scroll. Always stay at the top.
+            if (_content.rect.height <= _container.height) {
+                index = 0;
+                _scroll.velocity = Vector2.zero;
+            }
+
             for (var i = 0; i < _views.Length; i++) {
                 var position = (index < gap) ? index : index + i - gap;
                 if (i + 1 > _count || position >= _count) {
@@ -1006,7 +1033,8 @@ namespace UIS {
                 top.x = offset;
             }
             _content.anchoredPosition = top;
-            _scroll.velocity = SCROLL_VELOCITY;
+
+            _scroll.velocity = index == 0 ? -SCROLL_VELOCITY : SCROLL_VELOCITY;
         }
 
         /// <summary>
