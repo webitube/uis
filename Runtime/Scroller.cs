@@ -541,7 +541,7 @@ namespace UIS {
         void OnScrollChange(Vector2 vector) {
             // While the scroll bar is relaxing, stop moving entirely when it falls below a certain threshold so that it
             // doesn't drift way from the intended target index.
-            if ((previousScrollBarPosition - vector).sqrMagnitude < 1.0e-4f) {
+            if ((previousScrollBarPosition - vector).magnitude < 1.0e-4f) {
                 previousScrollBarPosition = vector;
                 return;
             }
