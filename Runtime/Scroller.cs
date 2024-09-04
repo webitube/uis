@@ -379,6 +379,19 @@ namespace UIS {
         }
 
         /// <summary>
+        /// The position of the view is encoded in its name. Check the name of the view's GameObject. 
+        /// Return true if the name matches the view's position.
+        /// Note: This is used to avoid calling OnFill() on the view unnecessarily.
+        /// </summary>
+        /// <param name="viewIndex"></param>
+        /// <param name="position"></param>
+        /// <returns></returns>
+        bool IsViewAlreadyFilled(int viewIndex, int position) {
+            var view = _views[viewIndex];
+            return (view != null && view.name.CompareTo(position.ToString()) == 0);
+        }
+
+        /// <summary>
         /// Main loop for vertical
         /// </summary>
         void UpdateVertical() {
@@ -399,7 +412,7 @@ namespace UIS {
                 }
                 var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _heights[_previousPosition];
                 var position = (topPosition > itemPosition) ? _previousPosition + 1 : _previousPosition - 1;
-                if (position < 0 || _scroll.velocity.y == 0.0f) {
+                if (position < 0) {
                     return;
                 }
                 if (position > _previousPosition) {
@@ -413,28 +426,32 @@ namespace UIS {
                     }
                     var index = position + _views.Length - 1;
                     if (index < _count) {
-                        var pos = _rects[newPosition].anchoredPosition;
-                        pos.y = _positions[index];
-                        _rects[newPosition].anchoredPosition = pos;
-                        var size = _rects[newPosition].sizeDelta;
-                        size.y = _heights[index];
-                        _rects[newPosition].sizeDelta = size;
-                        _views[newPosition].name = index.ToString();
-                        OnFill(index, _views[newPosition]);
+                        if (!IsViewAlreadyFilled(newPosition, index)) {
+                            var pos = _rects[newPosition].anchoredPosition;
+                            pos.y = _positions[index];
+                            _rects[newPosition].anchoredPosition = pos;
+                            var size = _rects[newPosition].sizeDelta;
+                            size.y = _heights[index];
+                            _rects[newPosition].sizeDelta = size;
+                            _views[newPosition].name = index.ToString();
+                            OnFill(index, _views[newPosition]);
+                        }
                     }
                 } else {
                     if (_previousPosition - position > 1) {
                         position = _previousPosition - 1;
                     }
                     var newIndex = position % _views.Length;
-                    var pos = _rects[newIndex].anchoredPosition;
-                    pos.y = _positions[position];
-                    _rects[newIndex].anchoredPosition = pos;
-                    var size = _rects[newIndex].sizeDelta;
-                    size.y = _heights[position];
-                    _rects[newIndex].sizeDelta = size;
-                    _views[newIndex].name = position.ToString();
-                    OnFill(position, _views[newIndex]);
+                    if (!IsViewAlreadyFilled(newIndex, position)) {
+                        var pos = _rects[newIndex].anchoredPosition;
+                        pos.y = _positions[position];
+                        _rects[newIndex].anchoredPosition = pos;
+                        var size = _rects[newIndex].sizeDelta;
+                        size.y = _heights[position];
+                        _rects[newIndex].sizeDelta = size;
+                        _views[newIndex].name = position.ToString();
+                        OnFill(position, _views[newIndex]);
+                    }
                 }
                 _previousPosition = position;
             } else {
@@ -450,11 +467,13 @@ namespace UIS {
                     position.y = _positions[i];
                     _rects[index].anchoredPosition = position;
                     if (_indexes[index] != i) {
-                        _indexes[index] = i;
-                        size.y = _heights[i];
-                        _rects[index].sizeDelta = size;
-                        _views[index].name = i.ToString();
-                        OnFill(i, _views[index]);
+                        if (IsViewAlreadyFilled(index, i)) {
+                            _indexes[index] = i;
+                            size.y = _heights[i];
+                            _rects[index].sizeDelta = size;
+                            _views[index].name = i.ToString();
+                            OnFill(i, _views[index]);
+                        }
                     }
                 }
             }
@@ -481,7 +500,7 @@ namespace UIS {
                 }
                 var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _widths[_previousPosition];
                 var position = (_leftPosition > itemPosition) ? _previousPosition + 1 : _previousPosition - 1;
-                if (position < 0 || _scroll.velocity.x == 0.0f) {
+                if (position < 0) {
                     return;
                 }
                 if (position > _previousPosition) {
@@ -495,28 +514,32 @@ namespace UIS {
                     }
                     var index = position + _views.Length - 1;
                     if (index < _count) {
-                        var pos = _rects[newPosition].anchoredPosition;
-                        pos.x = _positions[index];
-                        _rects[newPosition].anchoredPosition = pos;
-                        var size = _rects[newPosition].sizeDelta;
-                        size.x = _widths[index];
-                        _rects[newPosition].sizeDelta = size;
-                        _views[newPosition].name = index.ToString();
-                        OnFill(index, _views[newPosition]);
+                        if (!IsViewAlreadyFilled(newPosition, index)) {
+                            var pos = _rects[newPosition].anchoredPosition;
+                            pos.x = _positions[index];
+                            _rects[newPosition].anchoredPosition = pos;
+                            var size = _rects[newPosition].sizeDelta;
+                            size.x = _widths[index];
+                            _rects[newPosition].sizeDelta = size;
+                            _views[newPosition].name = index.ToString();
+                            OnFill(index, _views[newPosition]);
+                        }
                     }
                 } else {
                     if (_previousPosition - position > 1) {
                         position = _previousPosition - 1;
                     }
                     var newIndex = position % _views.Length;
-                    var pos = _rects[newIndex].anchoredPosition;
-                    pos.x = _positions[position];
-                    _rects[newIndex].anchoredPosition = pos;
-                    var size = _rects[newIndex].sizeDelta;
-                    size.x = _widths[position];
-                    _rects[newIndex].sizeDelta = size;
-                    _views[newIndex].name = position.ToString();
-                    OnFill(position, _views[newIndex]);
+                    if (!IsViewAlreadyFilled(newIndex, position)) {
+                        var pos = _rects[newIndex].anchoredPosition;
+                        pos.x = _positions[position];
+                        _rects[newIndex].anchoredPosition = pos;
+                        var size = _rects[newIndex].sizeDelta;
+                        size.x = _widths[position];
+                        _rects[newIndex].sizeDelta = size;
+                        _views[newIndex].name = position.ToString();
+                        OnFill(position, _views[newIndex]);
+                    }
                 }
                 _previousPosition = position;
             } else {
@@ -532,11 +555,13 @@ namespace UIS {
                     position.x = _positions[i];
                     _rects[index].anchoredPosition = position;
                     if (_indexes[index] != i) {
-                        _indexes[index] = i;
-                        size.x = _widths[i];
-                        _rects[index].sizeDelta = size;
-                        _views[index].name = i.ToString();
-                        OnFill(i, _views[index]);
+                        if (!IsViewAlreadyFilled(index, i)) {
+                            _indexes[index] = i;
+                            size.x = _widths[i];
+                            _rects[index].sizeDelta = size;
+                            _views[index].name = i.ToString();
+                            OnFill(i, _views[index]);
+                        }
                     }
                 }
             }
@@ -553,17 +578,6 @@ namespace UIS {
                 return;
             }
             previousScrollBarPosition = vector;
-
-            // Note: If the scroller position changed but the scroll velocity is exactly zero,
-            //       the movement was done via a scrollbar. In this case, we need to ScrollTo()
-            //       the indicated position directly.
-            // Note 2: The normalized scrollbar position is opposite from the ScrollTo() index.
-            //         This is why the we take (1.0 - scrollPos) instead of scrollPos directly.
-            if (_scroll.velocity.magnitude == 0.0f) {
-                var scrollPos = (Type == 0) ? (1.0f - vector.y) : vector.x;
-                var newIndex = Mathf.RoundToInt((_count - 1) * scrollPos);
-                ScrollTo(newIndex);
-            }
 
             if (Type == 0) {
                 ScrollChangeVertical();
