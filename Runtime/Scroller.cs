@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Codice.Client.BaseCommands.BranchExplorer;
+using Codice.Client.BaseCommands;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -30,7 +32,12 @@ namespace UIS {
         /// <summary>
         /// Velocity for scroll to function
         /// </summary>
-        Vector2 SCROLL_VELOCITY = new Vector2(0f, 50f);
+        Vector2 SCROLL_VELOCITY_VERT = new Vector2(0f, 50f);
+
+        /// <summary>
+        /// Velocity for scroll to function
+        /// </summary>
+        Vector2 SCROLL_VELOCITY_HORZ = new Vector2(50f, 0f);
 
         /// <summary>
         /// Delegate for heights
@@ -553,8 +560,8 @@ namespace UIS {
             // Note 2: The normalized scrollbar position is opposite from the ScrollTo() index.
             //         This is why the we take (1.0 - scrollPos) instead of scrollPos directly.
             if (_scroll.velocity.magnitude == 0.0f) {
-                var scrollPos = (Type == 0) ? vector.y : vector.x;
-                var newIndex = Mathf.RoundToInt((_count - 1) * (1.0f - scrollPos));
+                var scrollPos = (Type == 0) ? (1.0f - vector.y) : vector.x;
+                var newIndex = Mathf.RoundToInt((_count - 1) * scrollPos);
                 ScrollTo(newIndex);
             }
 
@@ -965,11 +972,25 @@ namespace UIS {
             }
         }
 
+
         /// <summary>
         /// Scroll to show item by index
         /// </summary>
         /// <param name="index">Item index</param>
         public void ScrollTo(int index) {
+
+            if (Type == 0) {
+                ScrollToVert(index);
+            } else {
+                ScrollToHorz(index);
+            }
+        }
+
+        /// <summary>
+        /// Scroll to show item by index
+        /// </summary>
+        /// <param name="index">Item index</param>
+        public void ScrollToVert(int index) {
 
             var contentHeight = _content.rect.height;
             var containerHeight = _container.height;
@@ -1034,7 +1055,69 @@ namespace UIS {
             }
             _content.anchoredPosition = top;
 
-            _scroll.velocity = index == 0 ? -SCROLL_VELOCITY : SCROLL_VELOCITY;
+            var velocity = Type == 0 ? SCROLL_VELOCITY_VERT : SCROLL_VELOCITY_HORZ;
+            _scroll.velocity = index == 0 ? -velocity : velocity;
+        }
+
+        /// <summary>
+        /// Scroll to show item by index
+        /// </summary>
+        /// <param name="index">Item index</param>
+        public void ScrollToHorz(int index) {
+
+            var contentWidth = _content.rect.width;
+            var containerWidth = _container.width;
+            var maxPosition = contentWidth - _container.width;
+
+            var currPos = _content.anchoredPosition;
+            currPos.x = Mathf.Min(-_positions[index], maxPosition);
+            _content.anchoredPosition = currPos;
+
+            var gap = 2;
+            if (index >= _count) {
+                index = _count - 1;
+            } else if (index < 0) {
+                index = 0;
+            }
+            if ((_views.Length < _count) && (index + _views.Length >= _count)) {
+                index = _count - _views.Length + AddonViewCount;
+            }
+
+            // If the content is smaller than the container, then don't scroll. Always stay at the top.
+            if (_content.rect.width <= _container.width) {
+                index = 0;
+                _scroll.velocity = Vector2.zero;
+            }
+
+            for (var i = 0; i < _views.Length; i++) {
+                var position = (index < gap) ? index : index + i - gap;
+                if (i + 1 > _count || position >= _count) {
+                    continue;
+                }
+                var pos = _rects[i].anchoredPosition;
+                pos.x = _positions[position];
+                _rects[i].anchoredPosition = pos;
+                var size = _rects[i].sizeDelta;
+                size.x = _widths[position];
+                _rects[i].sizeDelta = size;
+                _views[i].SetActive(true);
+                _views[i].name = position.ToString();
+                OnFill(position, _views[i]);
+            }
+            var offset = 0f;
+            for (var i = 0; i < index; i++) {
+                offset -= _widths[i] + ItemSpacing;
+            }
+            _previousPosition = index - _views.Length;
+            if (_previousPosition <= 0) {
+                InitData(_count);
+            }
+            var top = _content.anchoredPosition;
+            top.x = offset;
+            _content.anchoredPosition = top;
+
+            var velocity = SCROLL_VELOCITY_HORZ;
+            _scroll.velocity = -velocity;
         }
 
         /// <summary>
