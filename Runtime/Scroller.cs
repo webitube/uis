@@ -402,9 +402,6 @@ namespace UIS {
                     InitData(_count);
                     return;
                 }
-                if (topPosition < 0f) {
-                    return;
-                }
                 if (!_positions.ContainsKey(_previousPosition) || !_heights.ContainsKey(_previousPosition)) {
                     return;
                 }
@@ -485,12 +482,9 @@ namespace UIS {
                 return;
             }
             if (_isComplexList) {
-                var _leftPosition = _content.anchoredPosition.x * -1f - ItemSpacing;
+                var _leftPosition = -_content.anchoredPosition.x - ItemSpacing;
                 if (_leftPosition <= 0f && _rects[0].anchoredPosition.x < -LeftPadding) {
                     InitData(_count);
-                    return;
-                }
-                if (_leftPosition < 0f) {
                     return;
                 }
                 if (!_positions.ContainsKey(_previousPosition) || !_widths.ContainsKey(_previousPosition)) {
@@ -541,7 +535,7 @@ namespace UIS {
                 }
                 _previousPosition = position;
             } else {
-                var _leftPosition = _content.anchoredPosition.x * -1f - ItemSpacing;
+                var _leftPosition = -_content.anchoredPosition.x - ItemSpacing;
                 var offset = Mathf.FloorToInt(_leftPosition / (_offsetData + ItemSpacing));
                 for (var i = offset; i < offset + _views.Length; i++) {
                     var index = i % _views.Length;
@@ -886,6 +880,13 @@ namespace UIS {
                 }
                 pos.y = y;
                 _previousPosition = newCount;
+            } else {
+                // ScrollerDirection.Bottom
+                var w = 0f;
+                for (var i = _heights.Count - 1; i >= _heights.Count - newCount; i--) {
+                    w += _heights[i] + ItemSpacing;
+                }
+                pos.y = height + w + _container.width;
             }
             _content.anchoredPosition = pos;
             var topPosition = _content.anchoredPosition.y - ItemSpacing;
@@ -941,9 +942,10 @@ namespace UIS {
                 for (var i = 0; i < newCount; i++) {
                     x -= _widths[i] + ItemSpacing;
                 }
-                pos.x = x;
+                pos.x = x + _widths[newCount - 1];
                 _previousPosition = newCount;
             } else {
+                // ScrollerDirection.Right
                 var w = 0f;
                 for (var i = _widths.Count - 1; i >= _widths.Count - newCount; i--) {
                     w += _widths[i] + ItemSpacing;
