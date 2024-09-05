@@ -867,18 +867,17 @@ namespace UIS {
         void ApplyDataToVertical(int count, int newCount, ScrollerDirection direction) {
             if (_count == 0 || count <= _views.Length) {
                 InitData(count);
-                return;
             }
             _count = count;
             var totalContentWindowHeight = CalcSizesPositions(count);
+            var viewportHeight = _scroll.viewport.rect.height;
+            if (totalContentWindowHeight <= viewportHeight) {
+                return;
+            }
             _content.sizeDelta = new Vector2(_content.sizeDelta.x, totalContentWindowHeight);
             var pos = _content.anchoredPosition;
             if (direction == ScrollerDirection.Top) {
-                var y = 0f;
-                for (var i = 0; i < newCount; i++) {
-                    y += _heights[i] + ItemSpacing;
-                }
-                pos.y = y;
+                pos.y = 0f;
                 _previousPosition = newCount;
             } else {
                 // ScrollerDirection.Bottom
@@ -888,9 +887,8 @@ namespace UIS {
                 }
 
                 // Move the bottom edge of the content window if the new views are smaller than the viewport height.
-                var viewportHeight = _scroll.viewport.rect.height;
                 if (heightOfNewViews < viewportHeight) {
-                    pos.y = totalContentWindowHeight + viewportHeight;
+                    pos.y = totalContentWindowHeight - viewportHeight;
                 } else {
                     pos.y = totalContentWindowHeight + heightOfNewViews + _container.width;
                 }
@@ -942,28 +940,27 @@ namespace UIS {
         void ApplyDataToHorizontal(int count, int newCount, ScrollerDirection direction) {
             if (_count == 0 || count <= _views.Length) {
                 InitData(count);
-                return;
             }
             _count = count;
             var totalContentWindowWidth = CalcSizesPositions(count);
+            var viewportWidth = _scroll.viewport.rect.width;
+            if (totalContentWindowWidth <= viewportWidth) {
+                return;
+            }
             _content.sizeDelta = new Vector2(totalContentWindowWidth, _content.sizeDelta.y);
             var pos = _content.anchoredPosition;
             if (direction == ScrollerDirection.Left) {
-                var x = 0f;
-                for (var i = 0; i < newCount; i++) {
-                    x -= _widths[i] + ItemSpacing;
-                }
-                pos.x = x + _widths[newCount - 1];
+                pos.x = 0f;
                 _previousPosition = newCount;
             } else {
                 // ScrollerDirection.Right
+
                 var widthOfNewViews = 0f;
                 for (var i = _widths.Count - 1; i >= _widths.Count - newCount; i--) {
                     widthOfNewViews += _widths[i] + ItemSpacing;
                 }
 
                 // Move the right edge of the content window if the new views are smaller than the viewport width.
-                var viewportWidth = _scroll.viewport.rect.width;
                 if (widthOfNewViews < viewportWidth) {
                     pos.x = -totalContentWindowWidth + viewportWidth;
                 } else {
