@@ -460,9 +460,9 @@ namespace UIS {
                     var position = _rects[index].anchoredPosition;
                     var size = _rects[index].sizeDelta;
                     position.y = _positions[i];
-                    _rects[index].anchoredPosition = position;
                     if (_indexes[index] != i) {
                         if (!IsViewAlreadyFilled(index, i)) {
+                            _rects[index].anchoredPosition = position;
                             _indexes[index] = i;
                             size.y = _heights[i];
                             _rects[index].sizeDelta = size;
@@ -545,9 +545,9 @@ namespace UIS {
                     var position = _rects[index].anchoredPosition;
                     var size = _rects[index].sizeDelta;
                     position.x = _positions[i];
-                    _rects[index].anchoredPosition = position;
                     if (_indexes[index] != i) {
                         if (!IsViewAlreadyFilled(index, i)) {
+                            _rects[index].anchoredPosition = position;
                             _indexes[index] = i;
                             size.x = _widths[i];
                             _rects[index].sizeDelta = size;
@@ -870,8 +870,8 @@ namespace UIS {
                 return;
             }
             _count = count;
-            var height = CalcSizesPositions(count);
-            _content.sizeDelta = new Vector2(_content.sizeDelta.x, height);
+            var totalContentWindowHeight = CalcSizesPositions(count);
+            _content.sizeDelta = new Vector2(_content.sizeDelta.x, totalContentWindowHeight);
             var pos = _content.anchoredPosition;
             if (direction == ScrollerDirection.Top) {
                 var y = 0f;
@@ -882,11 +882,18 @@ namespace UIS {
                 _previousPosition = newCount;
             } else {
                 // ScrollerDirection.Bottom
-                var w = 0f;
+                var heightOfNewViews = 0f;
                 for (var i = _heights.Count - 1; i >= _heights.Count - newCount; i--) {
-                    w += _heights[i] + ItemSpacing;
+                    heightOfNewViews += _heights[i] + ItemSpacing;
                 }
-                pos.y = height + w + _container.width;
+
+                // Move the bottom edge of the content window if the new views are smaller than the viewport height.
+                var viewportHeight = _scroll.viewport.rect.height;
+                if (heightOfNewViews < viewportHeight) {
+                    pos.y = totalContentWindowHeight + viewportHeight;
+                } else {
+                    pos.y = totalContentWindowHeight + heightOfNewViews + _container.width;
+                }
             }
             _content.anchoredPosition = pos;
             var topPosition = _content.anchoredPosition.y - ItemSpacing;
@@ -895,6 +902,10 @@ namespace UIS {
             if (position < 0) {
                 _previousPosition = 0;
                 position = 1;
+            }
+            if (position >= _count) {
+                _previousPosition = _count - 1;
+                position = _count - 1;
             }
             if (!_isComplexList) {
                 for (var i = 0; i < _indexes.Length; i++) {
@@ -934,8 +945,8 @@ namespace UIS {
                 return;
             }
             _count = count;
-            var width = CalcSizesPositions(count);
-            _content.sizeDelta = new Vector2(width, _content.sizeDelta.y);
+            var totalContentWindowWidth = CalcSizesPositions(count);
+            _content.sizeDelta = new Vector2(totalContentWindowWidth, _content.sizeDelta.y);
             var pos = _content.anchoredPosition;
             if (direction == ScrollerDirection.Left) {
                 var x = 0f;
@@ -946,11 +957,18 @@ namespace UIS {
                 _previousPosition = newCount;
             } else {
                 // ScrollerDirection.Right
-                var w = 0f;
+                var widthOfNewViews = 0f;
                 for (var i = _widths.Count - 1; i >= _widths.Count - newCount; i--) {
-                    w += _widths[i] + ItemSpacing;
+                    widthOfNewViews += _widths[i] + ItemSpacing;
                 }
-                pos.x = -width + w + _container.width;
+
+                // Move the right edge of the content window if the new views are smaller than the viewport width.
+                var viewportWidth = _scroll.viewport.rect.width;
+                if (widthOfNewViews < viewportWidth) {
+                    pos.x = -totalContentWindowWidth + viewportWidth;
+                } else {
+                    pos.x = -totalContentWindowWidth + widthOfNewViews + _container.width;
+                }
             }
             _content.anchoredPosition = pos;
             var _leftPosition = _content.anchoredPosition.x - ItemSpacing;
@@ -959,6 +977,10 @@ namespace UIS {
             if (position < 0) {
                 _previousPosition = 0;
                 position = 1;
+            }
+            if (position >= _count) {
+                _previousPosition = _count - 1;
+                position = _count - 1;
             }
             if (!_isComplexList) {
                 for (var i = 0; i < _indexes.Length; i++) {
