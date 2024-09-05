@@ -465,7 +465,7 @@ namespace UIS {
                     position.y = _positions[i];
                     _rects[index].anchoredPosition = position;
                     if (_indexes[index] != i) {
-                        if (IsViewAlreadyFilled(index, i)) {
+                        if (!IsViewAlreadyFilled(index, i)) {
                             _indexes[index] = i;
                             size.y = _heights[i];
                             _rects[index].sizeDelta = size;
