@@ -847,14 +847,14 @@ namespace UIS {
         /// <param name="count">Total items count</param>
         /// <param name="newCount">Added items count</param>
         /// <param name="direction">Direction to add</param>
-        public void ApplyDataTo(int count, int newCount, ScrollerDirection direction) {
+        public void ApplyDataTo(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true) {
             if (!_isInited) {
                 return;
             }
             if (Type == 0) {
-                ApplyDataToVertical(count, newCount, direction);
+                ApplyDataToVertical(count, newCount, direction, updateContentPos);
             } else {
-                ApplyDataToHorizontal(count, newCount, direction);
+                ApplyDataToHorizontal(count, newCount, direction, updateContentPos);
             }
         }
 
@@ -864,9 +864,14 @@ namespace UIS {
         /// <param name="count">Total items count</param>
         /// <param name="newCount">Added items count</param>
         /// <param name="direction">Direction to add</param>
-        void ApplyDataToVertical(int count, int newCount, ScrollerDirection direction) {
+        /// <param name="updateContentPos">update the content window position to the position indicated by the ScrollerDirection.</param>
+        void ApplyDataToVertical(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true) {
             if (_count == 0 || count <= _views.Length) {
+                var saveContentPos = _content.anchoredPosition;
                 InitData(count);
+                if (!updateContentPos) {
+                    _content.anchoredPosition = saveContentPos;
+                }
             }
             _count = count;
             var totalContentWindowHeight = CalcSizesPositions(count);
@@ -893,7 +898,9 @@ namespace UIS {
                     pos.y = totalContentWindowHeight + heightOfNewViews + _container.width;
                 }
             }
-            _content.anchoredPosition = pos;
+            if (updateContentPos) {
+                _content.anchoredPosition = pos;
+            }
             var topPosition = _content.anchoredPosition.y - ItemSpacing;
             var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _heights[_previousPosition];
             var position = (topPosition > itemPosition) ? _previousPosition + 1 : _previousPosition - 1;
@@ -937,9 +944,14 @@ namespace UIS {
         /// <param name="count">Total items count</param>
         /// <param name="newCount">Added items count</param>
         /// <param name="direction">Direction to add</param>
-        void ApplyDataToHorizontal(int count, int newCount, ScrollerDirection direction) {
+        /// <param name="updateContentPos">update the content window position to the position indicated by the ScrollerDirection.</param>
+        void ApplyDataToHorizontal(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true) {
             if (_count == 0 || count <= _views.Length) {
+                var saveContentPos = _content.anchoredPosition;
                 InitData(count);
+                if (!updateContentPos) {
+                    _content.anchoredPosition = saveContentPos;
+                }
             }
             _count = count;
             var totalContentWindowWidth = CalcSizesPositions(count);
@@ -967,7 +979,9 @@ namespace UIS {
                     pos.x = -totalContentWindowWidth + widthOfNewViews + _container.width;
                 }
             }
-            _content.anchoredPosition = pos;
+            if (updateContentPos) {
+                _content.anchoredPosition = pos;
+            }
             var _leftPosition = _content.anchoredPosition.x - ItemSpacing;
             var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _widths[_previousPosition];
             var position = (_leftPosition > itemPosition) ? _previousPosition + 1 : _previousPosition - 1;
