@@ -485,10 +485,6 @@ namespace UIS {
                 var _leftPosition = -_content.anchoredPosition.x - ItemSpacing;
                 if (_leftPosition <= 0f && _rects[0].anchoredPosition.x < -LeftPadding) {
                     InitData(_count);
-                    return;
-                }
-                if (!_positions.ContainsKey(_previousPosition) || !_widths.ContainsKey(_previousPosition)) {
-                    return;
                 }
                 var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _widths[_previousPosition];
                 var position = (_leftPosition > itemPosition) ? _previousPosition + 1 : _previousPosition - 1;
@@ -867,11 +863,7 @@ namespace UIS {
         /// <param name="updateContentPos">update the content window position to the position indicated by the ScrollerDirection.</param>
         void ApplyDataToVertical(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true) {
             if (_count == 0 || count <= _views.Length) {
-                var saveContentPos = _content.anchoredPosition;
                 InitData(count);
-                if (!updateContentPos) {
-                    _content.anchoredPosition = saveContentPos;
-                }
             }
             _count = count;
             var totalContentWindowHeight = CalcSizesPositions(count);
@@ -901,17 +893,11 @@ namespace UIS {
             if (updateContentPos) {
                 _content.anchoredPosition = pos;
             }
+            var (topEdgeItem, bottomEdgeItem) = ScrollerUtils.ComputeIndexRangeVert(_scroll, _content, _count, _positions, _heights);
+            _previousPosition = topEdgeItem.ItemIndex;
             var topPosition = _content.anchoredPosition.y - ItemSpacing;
             var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _heights[_previousPosition];
-            var position = (topPosition > itemPosition) ? _previousPosition + 1 : _previousPosition - 1;
-            if (position < 0) {
-                _previousPosition = 0;
-                position = 1;
-            }
-            if (position >= _count) {
-                _previousPosition = _count - 1;
-                position = _count - 1;
-            }
+            var position = _previousPosition;
             if (!_isComplexList) {
                 for (var i = 0; i < _indexes.Length; i++) {
                     _indexes[i] = -1;
@@ -922,15 +908,15 @@ namespace UIS {
                 if (newIndex < 0) {
                     continue;
                 }
-                _views[newIndex].SetActive(true);
-                _views[newIndex].name = position.ToString();
-                OnFill(position, _views[newIndex]);
-                pos = _rects[newIndex].anchoredPosition;
-                pos.y = _positions[position];
-                _rects[newIndex].anchoredPosition = pos;
                 var size = _rects[newIndex].sizeDelta;
                 size.y = _heights[position];
                 _rects[newIndex].sizeDelta = size;
+                pos = _rects[newIndex].anchoredPosition;
+                pos.y = _positions[position];
+                _rects[newIndex].anchoredPosition = pos;
+                _views[newIndex].name = position.ToString();
+                OnFill(position, _views[newIndex]);
+                _views[newIndex].SetActive(true);
                 position++;
                 if (position == _count) {
                     break;
@@ -947,11 +933,7 @@ namespace UIS {
         /// <param name="updateContentPos">update the content window position to the position indicated by the ScrollerDirection.</param>
         void ApplyDataToHorizontal(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true) {
             if (_count == 0 || count <= _views.Length) {
-                var saveContentPos = _content.anchoredPosition;
                 InitData(count);
-                if (!updateContentPos) {
-                    _content.anchoredPosition = saveContentPos;
-                }
             }
             _count = count;
             var totalContentWindowWidth = CalcSizesPositions(count);
@@ -966,7 +948,6 @@ namespace UIS {
                 _previousPosition = newCount;
             } else {
                 // ScrollerDirection.Right
-
                 var widthOfNewViews = 0f;
                 for (var i = _widths.Count - 1; i >= _widths.Count - newCount; i--) {
                     widthOfNewViews += _widths[i] + ItemSpacing;
@@ -982,17 +963,11 @@ namespace UIS {
             if (updateContentPos) {
                 _content.anchoredPosition = pos;
             }
+            var (leftEdgeItem, rightEdgeItem) = ScrollerUtils.ComputeIndexRangeHorz(_scroll, _content, _count, _positions, _widths);
+            _previousPosition = leftEdgeItem.ItemIndex;
             var _leftPosition = _content.anchoredPosition.x - ItemSpacing;
             var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _widths[_previousPosition];
-            var position = (_leftPosition > itemPosition) ? _previousPosition + 1 : _previousPosition - 1;
-            if (position < 0) {
-                _previousPosition = 0;
-                position = 1;
-            }
-            if (position >= _count) {
-                _previousPosition = _count - 1;
-                position = _count - 1;
-            }
+            var position = _previousPosition;
             if (!_isComplexList) {
                 for (var i = 0; i < _indexes.Length; i++) {
                     _indexes[i] = -1;
@@ -1003,15 +978,15 @@ namespace UIS {
                 if (newIndex < 0) {
                     continue;
                 }
-                _views[newIndex].SetActive(true);
-                _views[newIndex].name = position.ToString();
-                OnFill(position, _views[newIndex]);
-                pos = _rects[newIndex].anchoredPosition;
-                pos.x = _positions[position];
-                _rects[newIndex].anchoredPosition = pos;
                 var size = _rects[newIndex].sizeDelta;
                 size.x = _widths[position];
                 _rects[newIndex].sizeDelta = size;
+                pos = _rects[newIndex].anchoredPosition;
+                pos.x = _positions[position];
+                _rects[newIndex].anchoredPosition = pos;
+                _views[newIndex].name = position.ToString();
+                OnFill(position, _views[newIndex]);
+                _views[newIndex].SetActive(true);
                 position++;
                 if (position == _count) {
                     break;
