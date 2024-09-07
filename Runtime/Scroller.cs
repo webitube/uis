@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -843,14 +844,14 @@ namespace UIS {
         /// <param name="count">Total items count</param>
         /// <param name="newCount">Added items count</param>
         /// <param name="direction">Direction to add</param>
-        public void ApplyDataTo(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true) {
+        public void ApplyDataTo(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true, CancellationToken ct = default) {
             if (!_isInited) {
                 return;
             }
             if (Type == 0) {
-                ApplyDataToVertical(count, newCount, direction, updateContentPos);
+                ApplyDataToVertical(count, newCount, direction, updateContentPos, ct);
             } else {
-                ApplyDataToHorizontal(count, newCount, direction, updateContentPos);
+                ApplyDataToHorizontal(count, newCount, direction, updateContentPos, ct);
             }
         }
 
@@ -861,7 +862,7 @@ namespace UIS {
         /// <param name="newCount">Added items count</param>
         /// <param name="direction">Direction to add</param>
         /// <param name="updateContentPos">update the content window position to the position indicated by the ScrollerDirection.</param>
-        void ApplyDataToVertical(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true) {
+        void ApplyDataToVertical(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true, CancellationToken ct = default) {
             if (_count == 0 || count <= _views.Length) {
                 var savePos = _content.anchoredPosition;
                 InitData(count);
@@ -935,7 +936,7 @@ namespace UIS {
         /// <param name="newCount">Added items count</param>
         /// <param name="direction">Direction to add</param>
         /// <param name="updateContentPos">update the content window position to the position indicated by the ScrollerDirection.</param>
-        void ApplyDataToHorizontal(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true) {
+        void ApplyDataToHorizontal(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true, CancellationToken ct = default) {
             if (_count == 0 || count <= _views.Length) {
                 var savePos = _content.anchoredPosition;
                 InitData(count);
@@ -971,7 +972,7 @@ namespace UIS {
             if (updateContentPos) {
                 _content.anchoredPosition = pos;
             }
-            var (leftEdgeItem, rightEdgeItem) = ScrollerUtils.ComputeIndexRangeHorz(_scroll, _content, _count, _positions, _widths);
+            var (leftEdgeItem, rightEdgeItem) = ScrollerUtils.ComputeIndexRangeHorz(_scroll, _content, _count, _positions, _widths, ct);
             _previousPosition = leftEdgeItem.ItemIndex;
             var _leftPosition = _content.anchoredPosition.x - ItemSpacing;
             var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _widths[_previousPosition];
