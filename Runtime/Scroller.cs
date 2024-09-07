@@ -863,7 +863,11 @@ namespace UIS {
         /// <param name="updateContentPos">update the content window position to the position indicated by the ScrollerDirection.</param>
         void ApplyDataToVertical(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true) {
             if (_count == 0 || count <= _views.Length) {
+                var savePos = _content.anchoredPosition;
                 InitData(count);
+                if (!updateContentPos) {
+                    _content.anchoredPosition = savePos;
+                }
             }
             _count = count;
             var totalContentWindowHeight = CalcSizesPositions(count);
@@ -933,7 +937,11 @@ namespace UIS {
         /// <param name="updateContentPos">update the content window position to the position indicated by the ScrollerDirection.</param>
         void ApplyDataToHorizontal(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true) {
             if (_count == 0 || count <= _views.Length) {
+                var savePos = _content.anchoredPosition;
                 InitData(count);
+                if (!updateContentPos) {
+                    _content.anchoredPosition = savePos;
+                }
             }
             _count = count;
             var totalContentWindowWidth = CalcSizesPositions(count);
