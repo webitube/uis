@@ -898,9 +898,9 @@ namespace UIS {
             if (updateContentPos) {
                 _content.anchoredPosition = pos;
             }
-
-            var (topEdgeItem, bottomEdgeItem) = ScrollerUtils.ComputeIndexRangeVert(_scroll, _content, _count, _positions, _heights);
-
+            var (topEdgeItem, _) = ScrollerUtils.ComputeIndexRangeVert(scroll: _scroll, content: _content, count: _count, 
+                                                                       positions: _positions, heights: _heights,
+                                                                       searchLeft: true, searchRight: false, ct);
             _previousPosition = topEdgeItem.ItemIndex;
             var topPosition = _content.anchoredPosition.y - ItemSpacing;
             var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _heights[_previousPosition];
@@ -974,7 +974,8 @@ namespace UIS {
             if (updateContentPos) {
                 _content.anchoredPosition = pos;
             }
-            var (leftEdgeItem, rightEdgeItem) = ScrollerUtils.ComputeIndexRangeHorz(_scroll, _content, _count, _positions, _widths, ct);
+            var (leftEdgeItem, _) = ScrollerUtils.ComputeIndexRangeHorz(scroll: _scroll, content: _content, count: _count, positions: _positions, 
+                                                                        widths: _widths, searchLeft: true, searchRight: false, ct);
             _previousPosition = leftEdgeItem.ItemIndex;
             var _leftPosition = _content.anchoredPosition.x - ItemSpacing;
             var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _widths[_previousPosition];
@@ -1004,7 +1005,6 @@ namespace UIS {
                 }
             }
         }
-
 
         /// <summary>
         /// Scroll to show item by index
