@@ -240,6 +240,16 @@ namespace UIS {
         public int Type = 0;
 
         /// <summary>
+        /// Is the scroller configured for vertical scrolling?
+        /// </summary>
+        public bool IsVerticalScroll => (Type == 0);
+
+        /// <summary>
+        /// Is the scroller configured for horizontal scrolling?
+        /// </summary>
+        public bool IsHorizontalScroll => !IsVerticalScroll;
+
+        /// <summary>
         /// Scrollrect cache
         /// </summary>
         ScrollRect _scroll = null;

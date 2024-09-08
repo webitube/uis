@@ -139,6 +139,11 @@ namespace UIS {
             var searchParamsLeft = new SearchParams(minIndex: 0, maxIndex: count - 1, searchPos: viewportMin, itemCount: count, posOffset: contentMin, negatePositions: false, positions: positions, itemSizes: widths);
             var resultLeft = searchLeft ? FindClosestEdges(searchParamsLeft, ct: ct) : null;
 
+            // If the left result is to the right of the edge, move the left edge index one step to the left.
+            if ((resultLeft != null) && (resultLeft.EdgeCrossing == EdgeState.rightOrBottom)) {
+                resultLeft.ItemIndex = Mathf.Max(0, (resultLeft.ItemIndex - 1));
+            }
+
             // DEBUG LOG
             //if (resultLeft != null) {
             //    Debug.Log($"FindClosestEdges(): resultLeft: ItemIndex={resultLeft.ItemIndex}, ContentEdge={resultLeft.ContentEdge}, DistToEdge={resultLeft.DistToEdge}, EdgeCrossing={resultLeft.EdgeCrossing}, ItemSize={resultLeft.ItemSize}, EdgePos={resultLeft.EdgePos}, ItemMin={resultLeft.ItemMin}, ItemMax={resultLeft.ItemMax}, SearchDepth={resultLeft.SearchDepth}, ItemCount={searchParamsLeft.ItemCount}");
@@ -147,6 +152,11 @@ namespace UIS {
             // Search Right
             var searchParamsRight = new SearchParams(minIndex: 0, maxIndex: count - 1, searchPos: viewportMax, itemCount: count, posOffset: contentMin, negatePositions: false, positions: positions, itemSizes: widths);
             var resultRight = searchRight ? FindClosestEdges(searchParamsRight, ct: ct) : null;
+
+            // If the right result is the left of the edge, move the right edge one step to the right.
+            if ((resultRight != null) && (resultRight.EdgeCrossing == EdgeState.leftOrTop)) {
+                resultRight.ItemIndex = Mathf.Min(count - 1, resultRight.ItemIndex + 1);
+            }
 
             // DEBUG LOG
             //if (resultRight != null) {
