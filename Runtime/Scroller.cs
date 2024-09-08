@@ -29,6 +29,18 @@ namespace UIS {
         public int AddonViewCount = 4;
 
         /// <summary>
+        /// Max. number of item updates (OnFill) calls per frame called from Update(). Generally, 1 is enough. But
+        /// if you wish to refresh all out-of-date items immediately, set this to some number greater than or equal to 
+        /// the number of items in the cache (i.e., _views.Length).
+        /// </summary>
+        public int MaxNumUpdatesPerFrame { get; set; } = 1;
+
+        /// <summary>
+        /// Used to cancel item search due to some external event.
+        /// </summary>
+        public CancellationToken CancellationToken { get; set; } = default;
+
+        /// <summary>
         /// Velocity for scroll to function
         /// </summary>
         Vector2 SCROLL_VELOCITY_VERT = new Vector2(0f, 50f);
@@ -398,58 +410,52 @@ namespace UIS {
                 return;
             }
             if (_isComplexList) {
+                var (topEdgeItem, _) = ScrollerUtils.ComputeIndexRangeVert(scroll: _scroll, content: _content, count: _count,
+                                                                            positions: _positions, heights: _heights,
+                                                                            searchLeft: true, searchRight: false, ct: CancellationToken);
+                _previousPosition = topEdgeItem.ItemIndex;
                 var topPosition = _content.anchoredPosition.y - ItemSpacing;
-                if (topPosition <= 0f && _rects[0].anchoredPosition.y < -TopPadding) {
-                    InitData(_count);
-                    return;
-                }
-                if (!_positions.ContainsKey(_previousPosition) || !_heights.ContainsKey(_previousPosition)) {
-                    return;
-                }
                 var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _heights[_previousPosition];
-                var position = (topPosition > itemPosition) ? _previousPosition + 1 : _previousPosition - 1;
-                if (position < 0) {
-                    return;
+                var position = _previousPosition;
+                if (!_isComplexList) {
+                    for (var i = 0; i < _indexes.Length; i++) {
+                        _indexes[i] = -1;
+                    }
                 }
-                if (position > _previousPosition) {
-                    if (position - _previousPosition > 1) {
-                        position = _previousPosition + 1;
-                    }
-                    var newPosition = position % _views.Length;
-                    newPosition--;
-                    if (newPosition < 0) {
-                        newPosition = _views.Length - 1;
-                    }
-                    var index = position + _views.Length - 1;
-                    if (index < _count) {
-                        if (!IsViewAlreadyFilled(newPosition, index)) {
-                            var pos = _rects[newPosition].anchoredPosition;
-                            pos.y = _positions[index];
-                            _rects[newPosition].anchoredPosition = pos;
-                            var size = _rects[newPosition].sizeDelta;
-                            size.y = _heights[index];
-                            _rects[newPosition].sizeDelta = size;
-                            _views[newPosition].name = index.ToString();
-                            OnFill(index, _views[newPosition]);
-                        }
-                    }
-                } else {
-                    if (_previousPosition - position > 1) {
-                        position = _previousPosition - 1;
-                    }
+                var numUpdates = 0;
+                for (var i = 0; i < _views.Length; i++) {
                     var newIndex = position % _views.Length;
-                    if (!IsViewAlreadyFilled(newIndex, position)) {
-                        var pos = _rects[newIndex].anchoredPosition;
-                        pos.y = _positions[position];
-                        _rects[newIndex].anchoredPosition = pos;
+                    if (!IsViewAlreadyFilled(viewIndex: newIndex, position: position)) {
+                        // Update item size.
                         var size = _rects[newIndex].sizeDelta;
                         size.y = _heights[position];
                         _rects[newIndex].sizeDelta = size;
+
+                        // Update item position.
+                        var pos = _rects[newIndex].anchoredPosition;
+                        pos.y = _positions[position];
+                        _rects[newIndex].anchoredPosition = pos;
+
+                        // Update item name
                         _views[newIndex].name = position.ToString();
+
+                        // Update item contents.
                         OnFill(position, _views[newIndex]);
+
+                        // Show the item.
+                        _views[newIndex].SetActive(true);
+
+                        numUpdates++;
+                        if (numUpdates >= MaxNumUpdatesPerFrame) {
+                            break;
+                        }
+                    }
+
+                    position++;
+                    if (position == _count) {
+                        break;
                     }
                 }
-                _previousPosition = position;
             } else {
                 var topPosition = _content.anchoredPosition.y - ItemSpacing;
                 var offset = Mathf.FloorToInt(topPosition / (_offsetData + ItemSpacing));
@@ -483,54 +489,41 @@ namespace UIS {
                 return;
             }
             if (_isComplexList) {
-                var _leftPosition = -_content.anchoredPosition.x - ItemSpacing;
-                if (_leftPosition <= 0f && _rects[0].anchoredPosition.x < -LeftPadding) {
-                    InitData(_count);
-                }
+                var (leftEdgeItem, _) = ScrollerUtils.ComputeIndexRangeHorz(scroll: _scroll, content: _content, count: _count, positions: _positions,
+                                                                            widths: _widths, searchLeft: true, searchRight: false,
+                                                                            ct: CancellationToken);
+                _previousPosition = leftEdgeItem.ItemIndex;
+                var _leftPosition = _content.anchoredPosition.x - ItemSpacing;
                 var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _widths[_previousPosition];
-                var position = (_leftPosition > itemPosition) ? _previousPosition + 1 : _previousPosition - 1;
-                if (position < 0) {
-                    return;
+                var position = _previousPosition;
+                if (!_isComplexList) {
+                    for (var i = 0; i < _indexes.Length; i++) {
+                        _indexes[i] = -1;
+                    }
                 }
-                if (position > _previousPosition) {
-                    if (position - _previousPosition > 1) {
-                        position = _previousPosition + 1;
-                    }
-                    var newPosition = position % _views.Length;
-                    newPosition--;
-                    if (newPosition < 0) {
-                        newPosition = _views.Length - 1;
-                    }
-                    var index = position + _views.Length - 1;
-                    if (index < _count) {
-                        if (!IsViewAlreadyFilled(newPosition, index)) {
-                            var pos = _rects[newPosition].anchoredPosition;
-                            pos.x = _positions[index];
-                            _rects[newPosition].anchoredPosition = pos;
-                            var size = _rects[newPosition].sizeDelta;
-                            size.x = _widths[index];
-                            _rects[newPosition].sizeDelta = size;
-                            _views[newPosition].name = index.ToString();
-                            OnFill(index, _views[newPosition]);
-                        }
-                    }
-                } else {
-                    if (_previousPosition - position > 1) {
-                        position = _previousPosition - 1;
-                    }
+                var numUpdates = 0;
+                for (var i = 0; i < _views.Length; i++) {
                     var newIndex = position % _views.Length;
-                    if (!IsViewAlreadyFilled(newIndex, position)) {
-                        var pos = _rects[newIndex].anchoredPosition;
-                        pos.x = _positions[position];
-                        _rects[newIndex].anchoredPosition = pos;
+                    if (!IsViewAlreadyFilled(viewIndex: newIndex, position: position)) {
                         var size = _rects[newIndex].sizeDelta;
                         size.x = _widths[position];
                         _rects[newIndex].sizeDelta = size;
+                        var pos = _rects[newIndex].anchoredPosition;
+                        pos.x = _positions[position];
+                        _rects[newIndex].anchoredPosition = pos;
                         _views[newIndex].name = position.ToString();
                         OnFill(position, _views[newIndex]);
+                        _views[newIndex].SetActive(true);
+                        numUpdates++;
+                        if (numUpdates >= MaxNumUpdatesPerFrame) {
+                            break;
+                        }
+                    }
+                    position++;
+                    if (position == _count) {
+                        break;
                     }
                 }
-                _previousPosition = position;
             } else {
                 var _leftPosition = -_content.anchoredPosition.x - ItemSpacing;
                 var offset = Mathf.FloorToInt(_leftPosition / (_offsetData + ItemSpacing));
@@ -844,14 +837,14 @@ namespace UIS {
         /// <param name="count">Total items count</param>
         /// <param name="newCount">Added items count</param>
         /// <param name="direction">Direction to add</param>
-        public void ApplyDataTo(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true, CancellationToken ct = default) {
+        public void ApplyDataTo(int count, int newCount, ScrollerDirection direction, bool updateContentPos = true) {
             if (!_isInited) {
                 return;
             }
             if (Type == 0) {
-                ApplyDataToVertical(count, newCount, direction, updateContentPos, ct);
+                ApplyDataToVertical(count, newCount, direction, updateContentPos, ct: CancellationToken);
             } else {
-                ApplyDataToHorizontal(count, newCount, direction, updateContentPos, ct);
+                ApplyDataToHorizontal(count, newCount, direction, updateContentPos, ct: CancellationToken);
             }
         }
 
@@ -899,8 +892,8 @@ namespace UIS {
                 _content.anchoredPosition = pos;
             }
             var (topEdgeItem, _) = ScrollerUtils.ComputeIndexRangeVert(scroll: _scroll, content: _content, count: _count, 
-                                                                       positions: _positions, heights: _heights,
-                                                                       searchLeft: true, searchRight: false, ct);
+                                                                                    positions: _positions, heights: _heights,
+                                                                                    searchLeft: true, searchRight: false, ct);
             _previousPosition = topEdgeItem.ItemIndex;
             var topPosition = _content.anchoredPosition.y - ItemSpacing;
             var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _heights[_previousPosition];
@@ -912,18 +905,18 @@ namespace UIS {
             }
             for (var i = 0; i < _views.Length; i++) {
                 var newIndex = position % _views.Length;
-                if (newIndex < 0) {
-                    continue;
+                if (!IsViewAlreadyFilled(viewIndex: newIndex, position: position)) {
+                    var size = _rects[newIndex].sizeDelta;
+                    size.y = _heights[position];
+                    _rects[newIndex].sizeDelta = size;
+                    pos = _rects[newIndex].anchoredPosition;
+                    pos.y = _positions[position];
+                    _rects[newIndex].anchoredPosition = pos;
+                    _views[newIndex].name = position.ToString();
+                    OnFill(position, _views[newIndex]);
+                    _views[newIndex].SetActive(true);
                 }
-                var size = _rects[newIndex].sizeDelta;
-                size.y = _heights[position];
-                _rects[newIndex].sizeDelta = size;
-                pos = _rects[newIndex].anchoredPosition;
-                pos.y = _positions[position];
-                _rects[newIndex].anchoredPosition = pos;
-                _views[newIndex].name = position.ToString();
-                OnFill(position, _views[newIndex]);
-                _views[newIndex].SetActive(true);
+
                 position++;
                 if (position == _count) {
                     break;
@@ -987,18 +980,17 @@ namespace UIS {
             }
             for (var i = 0; i < _views.Length; i++) {
                 var newIndex = position % _views.Length;
-                if (newIndex < 0) {
-                    continue;
+                if (!IsViewAlreadyFilled(viewIndex: newIndex, position: position)) {
+                    var size = _rects[newIndex].sizeDelta;
+                    size.x = _widths[position];
+                    _rects[newIndex].sizeDelta = size;
+                    pos = _rects[newIndex].anchoredPosition;
+                    pos.x = _positions[position];
+                    _rects[newIndex].anchoredPosition = pos;
+                    _views[newIndex].name = position.ToString();
+                    OnFill(position, _views[newIndex]);
+                    _views[newIndex].SetActive(true);
                 }
-                var size = _rects[newIndex].sizeDelta;
-                size.x = _widths[position];
-                _rects[newIndex].sizeDelta = size;
-                pos = _rects[newIndex].anchoredPosition;
-                pos.x = _positions[position];
-                _rects[newIndex].anchoredPosition = pos;
-                _views[newIndex].name = position.ToString();
-                OnFill(position, _views[newIndex]);
-                _views[newIndex].SetActive(true);
                 position++;
                 if (position == _count) {
                     break;
