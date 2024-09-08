@@ -22,12 +22,13 @@ namespace UIS {
         }
 
         class SearchParams {
-            public SearchParams(int minIndex, int maxIndex, float searchPos, int itemCount, float posOffset, Dictionary<int, float> positions, Dictionary<int, int> widths) {
+            public SearchParams(int minIndex, int maxIndex, float searchPos, int itemCount, float posOffset, bool negatePositions, Dictionary<int, float> positions, Dictionary<int, int> widths) {
                 MinIndex = minIndex;
                 MaxIndex = maxIndex;
                 SearchPos = searchPos;
                 ItemCount = itemCount;
                 PosOffset = posOffset;
+                NegatePositions = negatePositions;
                 Positions = positions;
                 Widths = widths;
             }
@@ -37,6 +38,7 @@ namespace UIS {
             public float SearchPos { get; set; }
             public int ItemCount { get; set; }
             public float PosOffset { get; set; }
+            public bool NegatePositions { get; set; }
             public Dictionary<int, float> Positions { get; set; }
             public Dictionary<int, int> Widths { get; set; }
         }
@@ -82,70 +84,32 @@ namespace UIS {
         /// <param name="widths"></param>
         /// <returns></returns>
         public static (ItemEdgeSearchResult leftOrTop, ItemEdgeSearchResult rightOrBottom) ComputeIndexRangeVert(
-                                            ScrollRect scroll, RectTransform content, int count, 
-                                            Dictionary<int, float> positions, Dictionary<int, int> widths) {
+                                            ScrollRect scroll, RectTransform content, int count,
+                                            Dictionary<int, float> positions, Dictionary<int, int> widths,
+                                            CancellationToken ct = default) {
+
             var contentMin = content.anchoredPosition.y;
             var contentMax = contentMin + scroll.viewport.rect.height;
 
-            var closestLeftEdgeDist = new ItemEdgeSearchResult() {
-                ContentEdge = ContentEdge.leftOrTop
-            };
+            // Search Left
+            var searchParamsLeft = new SearchParams(minIndex: 0, maxIndex: count - 1, searchPos: contentMin, itemCount: count, posOffset: 0f, negatePositions: true, positions: positions, widths: widths);
+            var resultLeft = FindClosestEdges(searchParamsLeft, ct: ct);
 
-            var closestRightEdgeDist = new ItemEdgeSearchResult() {
-                ContentEdge = ContentEdge.rightOrBottom
-            };
-
-            var lastIndex = count - 1;
-            for (var index = 0; index < count; index++) {
-                var min = -positions[index];
-                var currSize = widths[index];
-                var max = min + currSize;
-                var deltaLeft = Mathf.Abs(min - contentMin);
-                var deltaRight = Mathf.Abs(max - contentMin);
-                var minDelta = Mathf.Min(deltaLeft, deltaRight);
-                var isFirstIndex = index == 0;
-                var isLastIndex = index == lastIndex;
-
-                // Compare the current item with the top edge.
-                if (minDelta < closestLeftEdgeDist.DistToEdge) {
-                    closestLeftEdgeDist.ItemIndex = index;
-                    closestLeftEdgeDist.EdgeCrossing = ComputeEdgeState(min, max, contentMin);
-                    closestLeftEdgeDist.EdgePos = contentMin;
-                    closestLeftEdgeDist.ItemMin = min;
-                    closestLeftEdgeDist.ItemMax = max;
-                    closestLeftEdgeDist.ItemSize = currSize;
-                    closestLeftEdgeDist.DistToEdge = minDelta;
-                    closestLeftEdgeDist.IsFirstItem = isFirstIndex;
-                    closestLeftEdgeDist.IsLastItem = isLastIndex;
-                }
-
-                // Compare the current item with the bottom edge.
-                deltaLeft = Mathf.Abs(min - contentMax);
-                deltaRight = Mathf.Abs(max - contentMax);
-                minDelta = Mathf.Min(deltaLeft, deltaRight);
-                if (minDelta < closestRightEdgeDist.DistToEdge) {
-                    closestRightEdgeDist.ItemIndex = index;
-                    closestRightEdgeDist.EdgeCrossing = ComputeEdgeState(min, max, contentMax);
-                    closestRightEdgeDist.EdgePos = contentMax;
-                    closestRightEdgeDist.ItemMin = min;
-                    closestRightEdgeDist.ItemMax = max;
-                    closestRightEdgeDist.ItemSize = currSize;
-                    closestRightEdgeDist.DistToEdge = minDelta;
-                    closestRightEdgeDist.IsFirstItem = isFirstIndex;
-                    closestRightEdgeDist.IsLastItem = isLastIndex;
-                }
-            }
-
-            //// BEGIN DEBUG
-            //if (closestLeftEdgeDist.ItemIndex != -1) {
-            //    Debug.Log($"ComputeIndexRangeVert(): {closestLeftEdgeDist.ContentEdge}: [{closestLeftEdgeDist.ItemIndex}], IsFirstItem={closestLeftEdgeDist.IsFirstItem}, IsLastItem={closestLeftEdgeDist.IsLastItem}: EdgeCrossing={closestLeftEdgeDist.EdgeCrossing}, EdgePos={closestLeftEdgeDist.EdgePos}: size={closestLeftEdgeDist.ItemSize}, [min:{closestLeftEdgeDist.ItemMin}..max:{closestLeftEdgeDist.ItemMax}] (DistToEdge: {closestLeftEdgeDist.DistToEdge})");
+            //// DEBUG LOG
+            //if (resultLeft != null) {
+            //    Debug.Log($"ComputeIndexRangeVert2(): resultLeft: ItemIndex={resultLeft.ItemIndex}, ContentEdge={resultLeft.ContentEdge}, DistToEdge={resultLeft.DistToEdge}, EdgeCrossing={resultLeft.EdgeCrossing}, ItemSize={resultLeft.ItemSize}, EdgePos={resultLeft.EdgePos}, ItemMin={resultLeft.ItemMin}, ItemMax={resultLeft.ItemMax}, SearchDepth={resultLeft.SearchDepth}, ItemCount={resultLeft.ItemCount}, {resultLeft.SearchDepth}");
             //}
-            //if (closestRightEdgeDist.ItemIndex != -1) {
-            //    Debug.Log($"ComputeIndexRangeVert(): {closestRightEdgeDist.ContentEdge}: [{closestRightEdgeDist.ItemIndex}], IsFirstItem={closestRightEdgeDist.IsFirstItem}, IsLastItem={closestRightEdgeDist.IsLastItem}: EdgeCrossing={closestRightEdgeDist.EdgeCrossing}, EdgePos={closestRightEdgeDist.EdgePos}: size={closestRightEdgeDist.ItemSize}, [min:{closestRightEdgeDist.ItemMin}..max:{closestRightEdgeDist.ItemMax}] (DistToEdge: {closestRightEdgeDist.DistToEdge})");
-            //}
-            //// END DEBUG
 
-            return (closestLeftEdgeDist.ItemIndex != -1 ? closestLeftEdgeDist : null, closestRightEdgeDist.ItemIndex != -1 ? closestRightEdgeDist : null);
+            // Search Right
+            var searchParamsRight = new SearchParams(minIndex: 0, maxIndex: count - 1, searchPos: contentMax, itemCount: count, posOffset: 0f, negatePositions: true, positions: positions, widths: widths);
+            var resultRight = FindClosestEdges(searchParamsRight, ct: ct);
+
+            //// DEBUG LOG
+            //if (resultRight != null) {
+            //    Debug.Log($"ComputeIndexRangeVert2(): resultRight: ItemIndex={resultRight.ItemIndex}, ContentEdge={resultRight.ContentEdge}, DistToEdge={resultRight.DistToEdge}, EdgeCrossing={resultRight.EdgeCrossing}, ItemSize={resultRight.ItemSize}, EdgePos={resultRight.EdgePos}, ItemMin={resultRight.ItemMin}, ItemMax={resultRight.ItemMax}, SearchDepth={resultRight.SearchDepth}, ItemCount={resultLeft.ItemCount}, {resultLeft.SearchDepth}");
+            //}
+
+            return (resultLeft.ItemIndex != -1 ? resultLeft : null, resultRight.ItemIndex != -1 ? resultRight : null);
         }
 
         /// <summary>
@@ -167,7 +131,7 @@ namespace UIS {
             //var contentMax = contentMin + _content.rect.width;
 
             // Search Left
-            var searchParamsLeft = new SearchParams(0, _count - 1, viewportMin, _count, contentMin, _positions, _widths);
+            var searchParamsLeft = new SearchParams(minIndex: 0, maxIndex: _count - 1, searchPos: viewportMin, itemCount: _count, posOffset: contentMin, negatePositions: false, positions: _positions, widths: _widths);
             var resultLeft = FindClosestEdges(searchParamsLeft, ct: ct);
 
             // DEBUG LOG
@@ -176,7 +140,7 @@ namespace UIS {
             //}
 
             // Search Right
-            var searchParamsRight = new SearchParams(0, _count - 1, viewportMax, _count, contentMin, _positions, _widths);
+            var searchParamsRight = new SearchParams(minIndex: 0, maxIndex: _count - 1, searchPos: viewportMax, itemCount: _count, posOffset: contentMin, negatePositions: false, positions: _positions, widths: _widths);
             var resultRight = FindClosestEdges(searchParamsRight, ct: ct);
 
             // DEBUG LOG
@@ -189,6 +153,7 @@ namespace UIS {
 
         /// <summary>
         /// Use binary search to find the closest item to the given edge specified in the search params.
+        /// Note: This function is recursive.
         /// </summary>
         /// <param name="searchParams"></param>
         /// <param name="ct"></param>
@@ -217,36 +182,101 @@ namespace UIS {
             var count = searchParams.ItemCount;
             var posOffset = searchParams.PosOffset;
             var positions = searchParams.Positions;
+            var negatePosition = searchParams.NegatePositions ? -1f : 1f;
             var widths = searchParams.Widths;
 
-            var minPos = positions[minIndex] + posOffset;
+            var minPos = (negatePosition * positions[minIndex]) + posOffset;
 
             var maxIndexWidth = widths[maxIndex];
-            var maxPos = positions[maxIndex] + maxIndexWidth;
+            var maxPos = (negatePosition * positions[maxIndex]) + maxIndexWidth;
 
-            if ((minIndex < 0) || (maxIndex >= count) || (minIndex > maxIndex) || ((searchPos < minPos) && !minIsFirstIndex) || ((searchPos > maxPos) && !maxIsLastIndex)) {
+            // Check for edge case where the search position is fully outside the current search interval.
+            // If outside, the first or last item is the closest item.
+            if (searchPos < minPos) {
+                var resultMinPos = new ItemEdgeSearchResult {
+                    ItemIndex = minIndex,
+                    EdgeCrossing = ComputeEdgeState(minPos, maxPos, searchPos),
+                    ItemMin = minPos,
+                    ItemMax = maxPos,
+                    ItemSize = widths[minIndex],
+                    DistToEdge = minPos - searchPos,
+                    EdgePos = searchPos,
+                    IsFirstItem = minIndex == 0,
+                    IsLastItem = minIndex == (count - 1),
+                    SearchDepth = depth,
+                    ItemCount = searchParams.ItemCount
+                };
+                return resultMinPos;
+            } else if (searchPos > maxPos) {
+                var resultMaxPos = new ItemEdgeSearchResult {
+                    ItemIndex = maxIndex,
+                    EdgeCrossing = ComputeEdgeState(minPos, maxPos, searchPos),
+                    ItemMin = minPos,
+                    ItemMax = maxPos,
+                    ItemSize = widths[maxIndex],
+                    DistToEdge = searchPos - maxPos,
+                    EdgePos = searchPos,
+                    IsFirstItem = maxIndex == 0,
+                    IsLastItem = maxIndex == (count - 1),
+                    SearchDepth = depth,
+                    ItemCount = searchParams.ItemCount
+                };
+                return resultMaxPos;
+            }
+
+            if ((minIndex < 0) || (maxIndex >= count) || (minIndex > maxIndex) || ((searchPos < minPos) && minIsFirstIndex) || ((searchPos > maxPos) && maxIsLastIndex)) {
                 Debug.LogError($"FindClosestEdges(): Invalid range! minIndex={minIndex}, minIsFirstIndex={minIsFirstIndex}, maxIndex={maxIndex}, maxIslastIndex={maxIsLastIndex}, minPos={minPos}, maxPos={maxPos}, maxIndexWidth={maxIndexWidth}, searchPos={searchPos}, count={count}");
                 return null;
             }
 
             var index = (minIndex + maxIndex) / 2;
-            var min = positions[index] + posOffset;
+            var min = (negatePosition * positions[index]) + posOffset;
             var currSize = widths[index];
             var max = min + currSize;
-            if (searchPos < min) {
-                // Recurse on the left partition.
-                searchParams.MaxIndex = Mathf.Max(index - 1, searchParams.MinIndex);
+            if (Mathf.Abs(minIndex - maxIndex) == 1) {
+                // The search partion has been reduced to 1. So, the solution is one of these.
+                // Because of truncation from the averaging (i.e., (minIndex + maxIndex) / 2),
+                // maxIndex is the *other* index for which we need search distance information.
+
+                // Solution Found: Index is the closest to the edge. (MinIndex==MaxIndex)
+                var minIndexDist = DistToEdge(searchParams.MinIndex, searchParams);
+                Debug.Assert(Mathf.Abs(min - searchPos) == minIndexDist);
+
+                var maxIndexDist = DistToEdge(searchParams.MaxIndex, searchParams);
+                var (closestIndex, closestDist) = (minIndexDist < maxIndexDist) ? (minIndex, minIndexDist) : (maxIndex, maxIndexDist);
+
+                min = (negatePosition * positions[closestIndex]) + posOffset;
+                currSize = widths[closestIndex];
+                max = min + currSize;
+
+                var resultMinmax = new ItemEdgeSearchResult {
+                    ItemIndex = closestIndex,
+                    EdgeCrossing = ComputeEdgeState(min, max, searchPos),
+                    ItemMin = min,
+                    ItemMax = max,
+                    ItemSize = currSize,
+                    DistToEdge = closestDist,
+                    EdgePos = searchPos,
+                    IsFirstItem = (closestIndex == 0),
+                    IsLastItem = (closestIndex == (count - 1)),
+                    SearchDepth = depth,
+                    ItemCount = searchParams.ItemCount
+                };
+                return resultMinmax;
+            } else if (searchPos < min) {
+                // Recurse on the right partition
+                searchParams.MaxIndex = Mathf.Max(index, searchParams.MinIndex);
                 if (searchParams.MinIndex != searchParams.MaxIndex) {
                     return FindClosestEdges(searchParams, depth + 1, ct);
                 }
-                // Solution Found: Index is the closest to the edge.
+                // Solution Found: Index is the closest to the edge. (MinIndex==MaxIndex)
             } else if (searchPos > max) {
                 // Recurse on the right partition
-                searchParams.MinIndex = Mathf.Min(index + 1, searchParams.MaxIndex);
+                searchParams.MinIndex = Mathf.Min(index, searchParams.MaxIndex);
                 if (searchParams.MinIndex != searchParams.MaxIndex) {
                     return FindClosestEdges(searchParams, depth + 1, ct);
                 }
-                // Solution Found: Index is the closest to the edge.
+                // Solution Found: Index is the closest to the edge. (MinIndex==MaxIndex)
             } else {
                 // Solution Found: Intersection! We found it!
             }
@@ -268,6 +298,7 @@ namespace UIS {
                 ItemMax = max,
                 ItemSize = currSize,
                 DistToEdge = minDelta,
+                EdgePos = searchPos,
                 IsFirstItem = isFirstIndex,
                 IsLastItem = isLastIndex,
                 SearchDepth = depth,
@@ -275,6 +306,24 @@ namespace UIS {
             };
 
             return result;
+        }
+
+        static float DistToEdge(int index, SearchParams searchParams) {
+            var searchPos = searchParams.SearchPos;
+            var posOffset = searchParams.PosOffset;
+            var positions = searchParams.Positions;
+            var negatePosition = searchParams.NegatePositions ? -1f : 1f;
+            var widths = searchParams.Widths;
+
+            var minPos = (negatePosition * positions[index]) + posOffset;
+
+            var maxIndexWidth = widths[index];
+            var maxPos = (negatePosition * positions[index]) + maxIndexWidth;
+
+            var deltaLeft = Mathf.Abs(minPos - searchPos);
+            var deltaRight = Mathf.Abs(maxPos - searchPos);
+            var minDelta = Mathf.Min(deltaLeft, deltaRight);
+            return minDelta;
         }
     }
 }
