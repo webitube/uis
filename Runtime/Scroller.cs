@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -335,6 +336,19 @@ namespace UIS {
         /// </summary>
         bool _isInited = false;
 
+        public bool UpdateLoop {
+            get => updateLoop;
+            set {
+                if (updateLoop != value) {
+                    updateLoop = value;
+                    Debug.Log($"UpdateLoop={value}");
+                    onUpdateLoop?.Invoke(updateLoop);
+                }
+            }
+        }
+        bool updateLoop = false;
+        public UnityEvent<bool> onUpdateLoop = new();
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -382,6 +396,10 @@ namespace UIS {
         /// Main loop to check items positions and heights
         /// </summary>
         void Update() {
+            if (!UpdateLoop) {
+                return;
+            }
+
             if (Type == 0) {
                 UpdateVertical();
             } else {
@@ -422,6 +440,7 @@ namespace UIS {
                         _indexes[i] = -1;
                     }
                 }
+                var updateComplete = true;
                 var numUpdates = 0;
                 for (var i = 0; i < _views.Length; i++) {
                     var newIndex = position % _views.Length;
@@ -447,6 +466,7 @@ namespace UIS {
 
                         numUpdates++;
                         if (numUpdates >= MaxNumUpdatesPerFrame) {
+                            updateComplete = false;
                             break;
                         }
                     }
@@ -456,6 +476,7 @@ namespace UIS {
                         break;
                     }
                 }
+                UpdateLoop = !updateComplete;
             } else {
                 var topPosition = _content.anchoredPosition.y - ItemSpacing;
                 var offset = Mathf.FloorToInt(topPosition / (_offsetData + ItemSpacing));
@@ -501,6 +522,7 @@ namespace UIS {
                         _indexes[i] = -1;
                     }
                 }
+                var updateComplete = true;
                 var numUpdates = 0;
                 for (var i = 0; i < _views.Length; i++) {
                     var newIndex = position % _views.Length;
@@ -516,6 +538,7 @@ namespace UIS {
                         _views[newIndex].SetActive(true);
                         numUpdates++;
                         if (numUpdates >= MaxNumUpdatesPerFrame) {
+                            updateComplete = false;
                             break;
                         }
                     }
@@ -524,6 +547,7 @@ namespace UIS {
                         break;
                     }
                 }
+                UpdateLoop = !updateComplete;
             } else {
                 var _leftPosition = -_content.anchoredPosition.x - ItemSpacing;
                 var offset = Mathf.FloorToInt(_leftPosition / (_offsetData + ItemSpacing));
@@ -566,6 +590,7 @@ namespace UIS {
             } else {
                 ScrollChangeHorizontal();
             }
+            UpdateLoop = true;
         }
 
         /// <summary>
@@ -846,6 +871,7 @@ namespace UIS {
             } else {
                 ApplyDataToHorizontal(count, newCount, direction, updateContentPos, ct: CancellationToken);
             }
+            UpdateLoop = true;
         }
 
         /// <summary>
