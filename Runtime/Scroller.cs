@@ -351,7 +351,6 @@ namespace UIS {
             set {
                 if (updateLoop != value) {
                     updateLoop = value;
-                    Debug.Log($"UpdateLoop={value}");
                     onUpdateLoop?.Invoke(updateLoop);
                 }
             }
