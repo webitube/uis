@@ -362,6 +362,14 @@ namespace UIS {
         /// Constructor
         /// </summary>
         void Awake() {
+            Init();
+        }
+
+        void Init() {
+            if (_scroll != null) {
+                return;
+            }
+
             _container = (ParentContainer != null) ? ParentContainer.rect : GetComponent<RectTransform>().rect;
             _container.width = Mathf.Abs(_container.width);
             _container.height = Mathf.Abs(_container.height);
@@ -440,6 +448,9 @@ namespace UIS {
                 var (topEdgeItem, _) = ScrollerUtils.ComputeIndexRangeVert(scroll: _scroll, content: _content, count: _count,
                                                                             positions: _positions, heights: _heights,
                                                                             searchLeft: true, searchRight: false, ct: CancellationToken);
+                if (topEdgeItem == null) {
+                    return;
+                }
                 _previousPosition = topEdgeItem.ItemIndex;
                 var topPosition = _content.anchoredPosition.y - ItemSpacing;
                 var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _heights[_previousPosition];
@@ -522,6 +533,9 @@ namespace UIS {
                 var (leftEdgeItem, _) = ScrollerUtils.ComputeIndexRangeHorz(scroll: _scroll, content: _content, count: _count, positions: _positions,
                                                                             widths: _widths, searchLeft: true, searchRight: false,
                                                                             ct: CancellationToken);
+                if (leftEdgeItem == null) {
+                    return;
+                }
                 _previousPosition = leftEdgeItem.ItemIndex;
                 var _leftPosition = _content.anchoredPosition.x - ItemSpacing;
                 var itemPosition = Mathf.Abs(_positions[_previousPosition]) + _widths[_previousPosition];
@@ -821,6 +835,7 @@ namespace UIS {
         /// </summary>
         /// <returns>Common content height</returns>
         float CalcSizesPositions(int count) {
+            Init();
             return (Type == 0) ? CalcSizesPositionsVertical(count) : CalcSizesPositionsHorizontal(count);
         }
 
